@@ -1,0 +1,10 @@
+name = "ToolipsAuth"
+uuid = "3184f35e-742b-451a-92dd-8d9fc5a03efb"
+authors = ["emmac <emmettgb@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+Toolips = "a47e2ad8-fcf7-417c-9746-32b9bdf220bd"
+ToolipsSession = "2fe55384-55bc-4df3-9d59-c817d405cd05"
