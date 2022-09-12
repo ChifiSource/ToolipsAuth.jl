@@ -19,6 +19,13 @@ using SHA
 using JLD2
 
 """
+
+"""
+mutable struct UserGroup{s <: Symbol}
+    UserGoup(name::String) = new{Symbol(name)}()
+end
+
+"""
 ### Auth <: Toolips.ServerExtension
 - type::Vector{Symbol}
 - host::String
@@ -48,24 +55,27 @@ server.start()
 ```
 ------------------
 ##### constructors
-tokennaame
+- Auth(host::String = "127.0.0.1", port::Int64 = 8000; tokenname::String = "auth-token",
+provide_tokens::Bool = true, bit::Int64 = 16)
 """
 mutable struct Auth <: ServerExtension
+    host::String
+    port::String
     type::Vector{Symbol}
     f::Function
     tokenname::String
     data::Dict{Symbol, Any}
-    token_data::Dict{String, Dict{Symbol, Any}}
-    client_tokens::Dict{UInt8, String}
+    client_data::Dict{String, Dict{Symbol, Any}}
+    clients::Dict{UInt8, String}
     server_data::Dict{Symbol, Any}
     bit::Int64
-    function Auth(host::String, port::String,
-        tokenname::String = "auth-token", provide_tokens::Bool = true
-        ; bit::Int64 = 16)
+    function Auth(host::String = "127.0.0.1", port::Int64 = 8000;
+        tokenname::String = "auth-token", provide_tokens::Bool = true,
+        bit::Int64 = 16)
         if ~(bit % 16 == 0)
             throw("Auth bit not divisible by 16!")
         end
-        token_data = Dict{String, Dict{Symbol, Any}}()
+        client_data = Dict{String, Dict{Symbol, Any}}()
         server_data = Dict{Symbol, Any}(:blacklist => Vector{Vector{UInt8}}(),
         :provide_tokens => false)
         client_tokens = Dict{UInt8, String}()
@@ -84,6 +94,26 @@ end
 register!(c::AbstractConnection, d::Pair{Any, Any} ...) =  begin
     ipidentifier = sha256(getip(c))
     push!()
+end
+
+save_clients!(c::AbstractConnection, path::String) = begin
+
+end
+
+save_server!(c::AbstractConnection, path::String) = begin
+
+end
+
+authlink!(ts::Toolips.ToolipsServer) = begin
+
+end
+
+function auth_redirect!(cm::ComponentModifier, s::String)
+
+end
+
+function auth_spawn!()
+
 end
 
 token!(c::AbstractConnection) = begin
