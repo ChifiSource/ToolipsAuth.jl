@@ -21,13 +21,15 @@ using JLD2
 """
 ### Auth <: Toolips.ServerExtension
 - type::Vector{Symbol}
+- host::String
+- port::String
 - f::Function
 - tokenname::String
 - data::Dict{Symbol, Any}
 - token_data::Dict{String, Dict{Symbol, Any}}
 - client_tokens::Dict{UInt8, String}
 - server_data::Dict{Symbol, Any}
-- bit::Int64
+- bit::Int64\n
 The Auth extension provides a clear seperation between individual clients as
 well as data now the server can just store. All in all, this is a very useful
 extension. This could be used as the basis for a " login with Google"
@@ -57,7 +59,8 @@ mutable struct Auth <: ServerExtension
     client_tokens::Dict{UInt8, String}
     server_data::Dict{Symbol, Any}
     bit::Int64
-    function Auth(tokenname::String = "auth-token", provide_tokens::Bool = true
+    function Auth(host::String, port::String,
+        tokenname::String = "auth-token", provide_tokens::Bool = true
         ; bit::Int64 = 16)
         if ~(bit % 16 == 0)
             throw("Auth bit not divisible by 16!")
@@ -78,6 +81,11 @@ mutable struct Auth <: ServerExtension
     end
 end
 
+register!(c::AbstractConnection, d::Pair{Any, Any} ...) =  begin
+    ipidentifier = sha256(getip(c))
+    push!()
+end
+
 token!(c::AbstractConnection) = begin
     bit = c[:Auth].bit
     token::String = ""
@@ -88,10 +96,13 @@ token!(c::AbstractConnection) = begin
         token = join([gen_ref() for r in 1:bit/16])
         c[:Auth].client_tokens[sha256(getip(c))] = token
     end
+    token
 end
 
 function token(name::String, p::Pair{String, Any} ...; args ...)
-    Component(name, "token", p ... args ...)
+    c::Component{:token} = Component(name, "token", p ... args ...)
+    style!(c, "display" => "none")
+    c::Component{:token}
 end
 
 export token, token!, sha256, Auth
