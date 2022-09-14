@@ -75,12 +75,13 @@ mutable struct Auth <: ServerExtension
     port::String
     type::Vector{Symbol}
     f::Function
-    data::Dict{Symbol, Any}
     client_data::Dict{Vector{UInt8}, Dict{Symbol, Any}}
-    clients::Dict{UInt8, String}
+    clients::Dict{Vector{UInt8}, String}
     bit::Int64
-    function Auth(host::String = "127.0.0.1", port::Int64 = 8000,
-        tokenname::String = "auth-token", bit::Int64 = 16)
+    function Auth(host::String = "127.0.0.1",
+        port::Int64 = 8000;
+        tokenname::String = "auth-token", bit::Int64 = 16,
+        newconnections::Symbol = :public)
         client_data = Dict{String, Dict{Symbol, Any}}()
         server_data = Dict{Symbol, Any}(:blacklist => Vector{Vector{UInt8}}(),
         :provide_tokens => true, :tokenname => tokenname)
@@ -101,28 +102,28 @@ mutable struct Auth <: ServerExtension
     end
 end
 
-register!(c::AbstractConnection, d::Pair{Any, Any} ...) =  begin
-    ipidentifier = sha256(getip(c))
-    push!()
+function client_token(c::AbstractConnection)
+    token = c[:Auth].clients[sha256(getip(c))]
 end
 
-save_clients!(c::AbstractConnection, path::String) = begin
+client_token(c::AbstractConnection, cm::Modifier) = c
 
-end
-
-save_server!(c::AbstractConnection, path::String) = begin
+function group!(f::Function, c::AbstractConnection, s::String)
 
 end
 
-authlink!(ts::Toolips.ToolipsServer) = begin
+group(c::Connection) = c[:Auth].client_data[client_token(c)][:group]
 
+
+function authenticate!(f::Function, c::AbstractConnection, g::String = "public")
+    token =
+    if contains(c[:Auth].client_data[token][:group], UserGroup(g))
+
+    end
+    write!(c, token(c[:Auth].tokenname, text = tokentext))
 end
 
-function auth_redirect!(cm::ComponentModifier, s::String)
-
-end
-
-function auth_spawn!()
+function auth_redirect!(cm::ComponentModifier, s::String; delay::Number = .5)
 
 end
 
@@ -131,7 +132,6 @@ token!(c::AbstractConnection) = begin
     token::String = ""
     if sha256(getip(c)) in keys(c[:Auth].clienttokens)
         tokentext = c[:Auth].client_tokens[sha256(getip(c))]
-        write!(c, token(c[:Auth].tokenname, text = tokentext))
     else
         token = join([gen_ref() for r in 1:bit/16])
         c[:Auth].client_tokens[sha256(getip(c))] = token
@@ -140,18 +140,22 @@ token!(c::AbstractConnection) = begin
     token
 end
 
-function group!(c::Connection, s::String)
 
-end
-
-function authenticate!(f::Function, c::AbstractConnection)
-
-end
 
 function token(name::String, p::Pair{String, Any} ...; args ...)
     c::Component{:token} = Component(name, "token", p ... args ...)
     style!(c, "display" => "none")
     c::Component{:token}
+end
+
+save_client!(c::AbstractConnection, path::String) = begin
+    open(path) do io::IO
+
+    end
+end
+
+load_client!(c::AbstractConnection, path::String) = begin
+
 end
 
 export token, token!, sha256, Auth
