@@ -9,9 +9,9 @@ Provides simple authentication for toolips with client tokens.
 ##### Module Composition
 - [**ToolipsAuth**](https://github.com/ChifiSource/ToolipsAuth.jl)
 """
-
 module ToolipsAuth
 using Toolips
+import OddStructures: AbstractDimensions
 import Toolips: ServerExtension, AbstractConnection
 using ToolipsSession
 using ToolipsSession: gen_ref
@@ -19,6 +19,18 @@ using SHA
 using JLD2
 
 """
+### Name
+- text::String \
+Description
+##### example
+```
+
+```
+------------------
+##### field info
+
+------------------
+##### constructors
 
 """
 mutable struct UserGroup{s <: Symbol}
@@ -63,31 +75,29 @@ mutable struct Auth <: ServerExtension
     port::String
     type::Vector{Symbol}
     f::Function
-    tokenname::String
     data::Dict{Symbol, Any}
-    client_data::Dict{String, Dict{Symbol, Any}}
+    client_data::Dict{Vector{UInt8}, Dict{Symbol, Any}}
     clients::Dict{UInt8, String}
-    server_data::Dict{Symbol, Any}
     bit::Int64
-    function Auth(host::String = "127.0.0.1", port::Int64 = 8000;
-        tokenname::String = "auth-token", provide_tokens::Bool = true,
-        bit::Int64 = 16)
-        if ~(bit % 16 == 0)
-            throw("Auth bit not divisible by 16!")
-        end
+    function Auth(host::String = "127.0.0.1", port::Int64 = 8000,
+        tokenname::String = "auth-token", bit::Int64 = 16)
         client_data = Dict{String, Dict{Symbol, Any}}()
         server_data = Dict{Symbol, Any}(:blacklist => Vector{Vector{UInt8}}(),
-        :provide_tokens => false)
+        :provide_tokens => true, :tokenname => tokenname)
         client_tokens = Dict{UInt8, String}()
         f(c::Connection) = begin
             if c[:Auth].client_tokens[sha256(getip(c))] in server_data[:blacklist]
                 return
             end
-            if provide_tokens == true
-                token!(c)
+            token = token!(c)
+            if server_data[:provide_tokens] == true
+                write!(c, token)
+            end
+            on(c, "unload") do cm::ComponentModifier
+
             end
         end
-        new([:func, :connection], tokenname, f, active_routes)::AuthData
+        new(host, port, [:func, :connection], f, server_data )::AuthData
     end
 end
 
@@ -125,8 +135,17 @@ token!(c::AbstractConnection) = begin
     else
         token = join([gen_ref() for r in 1:bit/16])
         c[:Auth].client_tokens[sha256(getip(c))] = token
+        group!(c, "public")
     end
     token
+end
+
+function group!(c::Connection, s::String)
+
+end
+
+function authenticate!(f::Function, c::AbstractConnection)
+
 end
 
 function token(name::String, p::Pair{String, Any} ...; args ...)
