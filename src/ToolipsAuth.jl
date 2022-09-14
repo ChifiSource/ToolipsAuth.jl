@@ -16,26 +16,6 @@ import Toolips: ServerExtension, AbstractConnection
 using ToolipsSession
 using ToolipsSession: gen_ref
 using SHA
-using JLD2
-
-"""
-### Name
-- text::String \
-Description
-##### example
-```
-
-```
-------------------
-##### field info
-
-------------------
-##### constructors
-
-"""
-mutable struct UserGroup{s <: Symbol}
-    UserGoup(name::String) = new{Symbol(name)}()
-end
 
 """
 ### Auth <: Toolips.ServerExtension
@@ -71,26 +51,38 @@ server.start()
 provide_tokens::Bool = true, bit::Int64 = 16)
 """
 mutable struct Auth <: ServerExtension
+    active_routes::Vector{String}
     host::String
     port::String
     type::Vector{Symbol}
     f::Function
-    client_data::Dict{Vector{UInt8}, Dict{Symbol, Any}}
+    server_data::Dict{Symbol, Any}
+    client_groups::Dict{String, Vector{Vector{UInt8}}}
     clients::Dict{Vector{UInt8}, String}
     bit::Int64
-    function Auth(host::String = "127.0.0.1",
+    function Auth(active_routes::Vector{String} = ["/"], host::String = "127.0.0.1",
         port::Int64 = 8000;
         tokenname::String = "auth-token", bit::Int64 = 16,
         newconnections::Symbol = :public)
-        client_data = Dict{String, Dict{Symbol, Any}}()
-        server_data = Dict{Symbol, Any}(:blacklist => Vector{Vector{UInt8}}(),
-        :provide_tokens => true, :tokenname => tokenname)
+        client_groups = Dict{String, Vector{String}}()
+        server_data = Dict{Symbol, Any}(:provide_tokens => true,
+        :tokenname => tokenname)
         client_tokens = Dict{UInt8, String}()
         f(c::Connection) = begin
-            if c[:Auth].client_tokens[sha256(getip(c))] in server_data[:blacklist]
+            fullpath::String = http.message.target
+            if contains(http.message.target, "?")
+                fullpath = split(http.message.target, '?')[1]
+            end
+            if ~(fullpath in active_routes)
                 return
             end
-            token = token!(c)
+            token::String = ""
+            args::AbstractDict = getargs(c)
+            if :key in keys(getargs(c))
+                token = args[:key]
+            else
+                token = token!(c)
+            end
             if server_data[:provide_tokens] == true
                 write!(c, token)
             end
@@ -106,25 +98,22 @@ function client_token(c::AbstractConnection)
     token = c[:Auth].clients[sha256(getip(c))]
 end
 
-client_token(c::AbstractConnection, cm::Modifier) = c
-
-function group!(f::Function, c::AbstractConnection, s::String)
-
-end
-
-group(c::Connection) = c[:Auth].client_data[client_token(c)][:group]
-
-
-function authenticate!(f::Function, c::AbstractConnection, g::String = "public")
-    token =
-    if contains(c[:Auth].client_data[token][:group], UserGroup(g))
-
+function group!(c::AbstractConnection, s::String = "public"; reset::Bool = false)
+    groups = c[:Auth].client_groups
+    if reset
+        groups = Dict{String, String}()
     end
-    write!(c, token(c[:Auth].tokenname, text = tokentext))
+    push!(groups[client_token(c)], s)
 end
 
-function auth_redirect!(cm::ComponentModifier, s::String; delay::Number = .5)
+in_group(c::Connection, group::String) = group in group(c)
 
+group(c::Connection) = c[:Auth].client_groups[client_token(c)][:group]
+
+group(f::Function, c::Connection, s::String) = begin
+    if in_group(c, s)
+        f(c)
+    end
 end
 
 token!(c::AbstractConnection) = begin
@@ -135,12 +124,10 @@ token!(c::AbstractConnection) = begin
     else
         token = join([gen_ref() for r in 1:bit/16])
         c[:Auth].client_tokens[sha256(getip(c))] = token
-        group!(c, "public")
+        group!(c, "new")
     end
     token
 end
-
-
 
 function token(name::String, p::Pair{String, Any} ...; args ...)
     c::Component{:token} = Component(name, "token", p ... args ...)
@@ -148,14 +135,11 @@ function token(name::String, p::Pair{String, Any} ...; args ...)
     c::Component{:token}
 end
 
-save_client!(c::AbstractConnection, path::String) = begin
-    open(path) do io::IO
-
-    end
-end
-
-load_client!(c::AbstractConnection, path::String) = begin
-
+function auth_redirect!(c::Connection,
+    cm::ComponentModifier, s::String, delay::Number = .5)
+    key = cm[c[:Auth].server_data[:tokenname]]["text"]
+    url = url * "?key=$key"
+    redirect!(cm, url, delay)
 end
 
 export token, token!, sha256, Auth
