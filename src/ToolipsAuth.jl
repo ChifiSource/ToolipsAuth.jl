@@ -56,6 +56,7 @@ mutable struct Auth <: ServerExtension
     type::Vector{Symbol}
     f::Function
     server_data::Dict{Symbol, Any}
+    authlinks::Dict{String, Vector{String}}
     client_groups::Dict{String, Vector{String}}
     client_tokens::Dict{Vector{UInt8}, String}
     bit::Int64
@@ -67,6 +68,7 @@ mutable struct Auth <: ServerExtension
         server_data = Dict{Symbol, Any}(:provide_tokens => true,
         :tokenname => tokenname)
         client_tokens = Dict{Vector{UInt8}, String}()
+        authlinks::Dict{String, Vector{String}} = Dict{String, Vector{String}}()
         f(c::Connection) = begin
             fullpath::String = c.http.message.target
             if contains(c.http.message.target, "?")
@@ -77,8 +79,12 @@ mutable struct Auth <: ServerExtension
             end
             tok::String = ""
             args::AbstractDict = getargs(c)
-            if :key in keys(getargs(c))
+            if :key in keys(args)
                 tok = args[:key]
+                if tok in authlinks
+                    delete!(authlinks, tok)
+                    client_tokens[sha256(getip(c))] = tok
+                end
             else
                 tok = token!(c)
             end
@@ -86,11 +92,15 @@ mutable struct Auth <: ServerExtension
                 write!(c, token(tokenname, text = tok))
             end
             on(c, "unload") do cm::ComponentModifier
-
+                #== TODO Store authenticated data, remove the current key
+                    Perhaps allow a closure to run? I am not exactly sure
+                    where I want to take it. :D
+                ==#
             end
         end
-        new(active_routes, host, port, [:func, :connection], f, server_data, client_groups,
-         client_tokens, bit)::Auth
+        new(active_routes, host, port, [:func, :connection], f, server_data,
+        authlinks, client_groups,
+        client_tokens, bit)::Auth
     end
 end
 
@@ -229,6 +239,13 @@ function auth_redirect!(c::Connection,
     key = cm[c[:Auth].server_data[:tokenname]]["text"]
     url = url * "?key=$key"
     redirect!(cm, url, delay)
+end
+
+function authenticated_link!(c::Connection, group::Vector{String},
+    hostname::String)
+    key::String = join([gen_ref() for r in 1:c[:Auth].bit/16])
+    c[:Auth].authlinks[key] = group
+    return("https://$hostname/?key=$key")
 end
 
 export token, token!, sha256, Auth, group, group!, in_group, client_token
