@@ -39,3 +39,19 @@ function home(c::Connection)
     end
 end
 ```
+##### 1.1 new feature: authenticated link
+```julia
+using Toolips
+using ToolipsSession
+using ToolipsDefaults
+using ToolipsAuth
+using SHA
+home = route("/") do c::Connection
+    group("new") do c::Connection
+        username_box = ToolipsDefaults.
+        submit_button = button("mybutton", text = "login !")
+    end
+    group(""
+end
+end
+```
