@@ -113,19 +113,22 @@ mutable struct Auth <: ServerExtension
     f::Function
     server_data::Dict{Symbol, Any}
     authlinks::Dict{String, Vector{String}}
-    client_groups::Dict{String, Vector{String}}
+    client_info::Dict{String, Dict{String, Any}}
     client_tokens::Dict{Vector{UInt8}, String}
     bit::Int64
     function Auth(active_routes::Vector{String} = ["/"], host::String = "127.0.0.1",
         port::Int64 = 8000;
         tokenname::String = "auth-token", bit::Int64 = 16,
-        newconnections::Symbol = :public)
-        client_groups = Dict{String, Vector{String}}()
+        default_group::String = "public", save::Bool = false)
+        client_info = Dict{String, Vector{String}}()
         server_data = Dict{Symbol, Any}(:provide_tokens => true,
         :tokenname => tokenname)
         client_tokens = Dict{Vector{UInt8}, String}()
         authlinks::Dict{String, Vector{String}} = Dict{String, Vector{String}}()
         f(c::Connection) = begin
+            if save == true
+                
+            end
             fullpath::String = c.http.message.target
             if contains(c.http.message.target, "?")
                 fullpath = split(c.http.message.target, '?')[1]
