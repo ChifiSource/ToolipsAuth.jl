@@ -1,7 +1,7 @@
 name = "ToolipsAuth"
 uuid = "3184f35e-742b-451a-92dd-8d9fc5a03efb"
 authors = ["emmac <emmettgb@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -11,4 +11,4 @@ ToolipsSession = "2fe55384-55bc-4df3-9d59-c817d405cd05"
 [compat]
 julia = "1.5"
 Toolips = "0.2.0"
-ToolipsSession = "0.2.0"
+ToolipsSession = "0.3.0"
