@@ -1,3 +1,8 @@
+## dead repo
+`ToolipsAuth` is now a part of `ToolipsSession` in `Toolips` `0.3`. [ToolipsSession](https://github.com/ChifiSource/ToolipsSession.jl).
+--
+- ( **This project can still be used with `Toolips` `0.2`.** )
+
 <div align="center">
 <img src = https://github.com/ChifiSource/image_dump/blob/main/toolips/toolipsauth.png>
 <h5>universal authentication for toolips</h5>
